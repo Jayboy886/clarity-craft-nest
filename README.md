@@ -11,6 +11,12 @@ A decentralized platform for sharing and collaborating on DIY craft tutorials. C
 
 - Tutorial posting and management
 - Reputation token system
-- Collaborative session scheduling
+- Time-limited collaborative session scheduling
 - Tutorial voting and ranking
 - Creator rewards distribution
+
+## Recent Updates
+
+- Added time-limited collaborative sessions with automatic expiration
+- Enhanced session validation checks
+- Improved error handling for session management

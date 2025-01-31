@@ -3,8 +3,10 @@
 ;; Constants
 (define-constant contract-owner tx-sender)
 (define-constant err-owner-only (err u100))
-(define-constant err-not-found (err u101))
+(define-constant err-not-found (err u101)) 
 (define-constant err-unauthorized (err u102))
+(define-constant err-session-full (err u103))
+(define-constant err-session-inactive (err u104))
 
 ;; Define fungible token for reputation
 (define-fungible-token craft-reputation)
@@ -27,7 +29,8 @@
         tutorial-id: uint,
         max-participants: uint,
         registered-count: uint,
-        active: bool
+        active: bool,
+        end-block-height: uint
     }
 )
 
@@ -67,9 +70,10 @@
 )
 
 ;; Collaborative session functions
-(define-public (create-session (tutorial-id uint) (max-participants uint))
+(define-public (create-session (tutorial-id uint) (max-participants uint) (duration uint))
     (let
-        ((new-id (+ (var-get session-count) u1)))
+        ((new-id (+ (var-get session-count) u1))
+         (end-height (+ block-height duration)))
         (try! (map-insert collaborative-sessions
             { session-id: new-id }
             {
@@ -77,7 +81,8 @@
                 tutorial-id: tutorial-id,
                 max-participants: max-participants,
                 registered-count: u0,
-                active: true
+                active: true,
+                end-block-height: end-height
             }
         ))
         (var-set session-count new-id)
@@ -88,7 +93,9 @@
 (define-public (join-session (session-id uint))
     (match (map-get? collaborative-sessions { session-id: session-id })
         session (begin
-            (asserts! (< (get registered-count session) (get max-participants session)) (err u103))
+            (asserts! (get active session) (err err-session-inactive))
+            (asserts! (<= block-height (get end-block-height session)) (err err-session-inactive))
+            (asserts! (< (get registered-count session) (get max-participants session)) (err err-session-full))
             (try! (map-set collaborative-sessions
                 { session-id: session-id }
                 (merge session { registered-count: (+ (get registered-count session) u1) })
