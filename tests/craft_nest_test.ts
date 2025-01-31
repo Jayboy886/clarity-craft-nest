@@ -41,7 +41,6 @@ Clarinet.test({
     const deployer = accounts.get('deployer')!;
     const user = accounts.get('wallet_1')!;
     
-    // Create tutorial first
     let block = chain.mineBlock([
       Tx.contractCall('craft-nest', 'create-tutorial', [
         types.ascii("Test Tutorial")
@@ -50,7 +49,6 @@ Clarinet.test({
     
     const tutorialId = block.receipts[0].result.expectOk().expectUint();
     
-    // Vote on tutorial
     let voteBlock = chain.mineBlock([
       Tx.contractCall('craft-nest', 'vote-tutorial', [
         types.uint(tutorialId)
@@ -59,7 +57,6 @@ Clarinet.test({
     
     voteBlock.receipts[0].result.expectOk();
     
-    // Check tutorial votes increased
     let getTutorial = chain.callReadOnlyFn(
       'craft-nest',
       'get-tutorial',
@@ -73,12 +70,11 @@ Clarinet.test({
 });
 
 Clarinet.test({
-  name: "Can create and join collaborative session",
+  name: "Can create and join time-limited collaborative session",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const deployer = accounts.get('deployer')!;
     const user = accounts.get('wallet_1')!;
     
-    // Create tutorial first
     let tutorialBlock = chain.mineBlock([
       Tx.contractCall('craft-nest', 'create-tutorial', [
         types.ascii("Group Craft")
@@ -87,17 +83,16 @@ Clarinet.test({
     
     const tutorialId = tutorialBlock.receipts[0].result.expectOk().expectUint();
     
-    // Create session
     let sessionBlock = chain.mineBlock([
       Tx.contractCall('craft-nest', 'create-session', [
         types.uint(tutorialId),
-        types.uint(5)
+        types.uint(5),
+        types.uint(100)
       ], deployer.address)
     ]);
     
     const sessionId = sessionBlock.receipts[0].result.expectOk().expectUint();
     
-    // Join session
     let joinBlock = chain.mineBlock([
       Tx.contractCall('craft-nest', 'join-session', [
         types.uint(sessionId)
@@ -106,7 +101,6 @@ Clarinet.test({
     
     joinBlock.receipts[0].result.expectOk();
     
-    // Verify session details
     let getSession = chain.callReadOnlyFn(
       'craft-nest',
       'get-session',
@@ -116,5 +110,6 @@ Clarinet.test({
     
     const session = getSession.result.expectSome().expectTuple();
     assertEquals(session['registered-count'], types.uint(1));
+    assertEquals(session['active'], types.bool(true));
   },
 });
