@@ -7,6 +7,7 @@
 (define-constant err-unauthorized (err u102))
 (define-constant err-session-full (err u103))
 (define-constant err-session-inactive (err u104))
+(define-constant err-reward-already-claimed (err u105))
 
 ;; Define fungible token for reputation
 (define-fungible-token craft-reputation)
@@ -26,7 +27,7 @@
     { session-id: uint }
     {
         host: principal,
-        tutorial-id: uint,
+        tutorial-id: uint, 
         max-participants: uint,
         registered-count: uint,
         active: bool,
@@ -64,6 +65,22 @@
                 (merge tutorial { votes: (+ (get votes tutorial) u1) })
             ))
             (ft-mint? craft-reputation u1 tx-sender)
+        )
+        (err err-not-found)
+    )
+)
+
+(define-public (claim-tutorial-reward (tutorial-id uint))
+    (match (map-get? tutorials { tutorial-id: tutorial-id })
+        tutorial (begin
+            (asserts! (is-eq (get creator tutorial) tx-sender) (err err-unauthorized))
+            (asserts! (not (get reward-claimed tutorial)) (err err-reward-already-claimed))
+            (asserts! (>= (get votes tutorial) u10) (err err-unauthorized))
+            (try! (map-set tutorials
+                { tutorial-id: tutorial-id }
+                (merge tutorial { reward-claimed: true })
+            ))
+            (ft-mint? craft-reputation u25 tx-sender)
         )
         (err err-not-found)
     )
