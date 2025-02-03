@@ -113,3 +113,49 @@ Clarinet.test({
     assertEquals(session['active'], types.bool(true));
   },
 });
+
+Clarinet.test({
+  name: "Can claim reward for popular tutorial",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const deployer = accounts.get('deployer')!;
+    const user1 = accounts.get('wallet_1')!;
+    
+    // Create tutorial
+    let createBlock = chain.mineBlock([
+      Tx.contractCall('craft-nest', 'create-tutorial', [
+        types.ascii("Popular Tutorial")
+      ], deployer.address)
+    ]);
+    
+    const tutorialId = createBlock.receipts[0].result.expectOk().expectUint();
+    
+    // Add 10 votes
+    for(let i = 0; i < 10; i++) {
+      chain.mineBlock([
+        Tx.contractCall('craft-nest', 'vote-tutorial', [
+          types.uint(tutorialId)
+        ], user1.address)
+      ]);
+    }
+    
+    // Claim reward
+    let claimBlock = chain.mineBlock([
+      Tx.contractCall('craft-nest', 'claim-tutorial-reward', [
+        types.uint(tutorialId)
+      ], deployer.address)
+    ]);
+    
+    claimBlock.receipts[0].result.expectOk();
+    
+    // Verify reward claimed
+    let getTutorial = chain.callReadOnlyFn(
+      'craft-nest',
+      'get-tutorial',
+      [types.uint(tutorialId)],
+      deployer.address
+    );
+    
+    const tutorial = getTutorial.result.expectSome().expectTuple();
+    assertEquals(tutorial['reward-claimed'], types.bool(true));
+  },
+});
